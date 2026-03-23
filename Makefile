@@ -12,8 +12,6 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 ## Tool Binaries
 PREFLIGHT ?= $(LOCALBIN)/preflight
-## Tool Versions
-PREFLIGHT_VERSION ?= 1.9.9
 
 .PHONY: help
 
@@ -37,24 +35,19 @@ preflight-image-submit: preflight ## Run preflight tests on the image and submit
 	$(PREFLIGHT) check container $(PREFLIGHT_IMAGE)\
 		--submit \
 		--pyxis-api-token=$(REDHAT_API_KEY) \
-		--certification-project-id=$(REDHAT_PROJECT_ID)\
+		--certification-component-id=$(REDHAT_PROJECT_ID)\
 		--docker-config $(DOCKER_CONFIG) 
 
 .PHONY: preflight
 preflight: ## Download preflight locally if necessary.
-ifeq (,$(wildcard $(PREFLIGHT)))
-ifeq (,$(shell which preflight 2>/dev/null))
 	@{ \
 	set -e ;\
+	PREFLIGHT_VERSION=$$(curl -s https://api.github.com/repos/redhat-openshift-ecosystem/openshift-preflight/releases/latest | jq -r .tag_name) ;\
 	mkdir -p $(dir $(PREFLIGHT)) ;\
-	OS=$(shell uname | tr '[:upper:]' '[:lower:]') && \
-	ARCH=$(shell uname -m) ;\
+	OS=$$(uname | tr '[:upper:]' '[:lower:]') ;\
+	ARCH=$$(uname -m) ;\
 	if [ "$$ARCH" = "x86_64" ]; then ARCH="amd64"; fi ;\
 	if [ "$$ARCH" = "aarch64" ]; then ARCH="arm64"; fi ;\
-	curl -sSLo $(PREFLIGHT) https://github.com/redhat-openshift-ecosystem/openshift-preflight/releases/download/$(PREFLIGHT_VERSION)/preflight-$${OS}-$${ARCH} ;\
+	curl -sSLo $(PREFLIGHT) https://github.com/redhat-openshift-ecosystem/openshift-preflight/releases/download/$$PREFLIGHT_VERSION/preflight-$$OS-$$ARCH ;\
 	chmod +x $(PREFLIGHT) ;\
 	}
-else
-	PREFLIGHT := $(shell which preflight)
-endif
-endif
